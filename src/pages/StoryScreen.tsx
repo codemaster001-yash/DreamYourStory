@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { generateStoryContent, generateImage, generateCharacterImage } from '../services/geminiService';
@@ -32,6 +32,22 @@ const StoryScreen: React.FC = () => {
   const scenes = useMemo(() => story?.scenes || [], [story]);
   const activeScene = scenes[currentSceneIndex];
 
+  // To break a dependency cycle (handleSwipe -> stop -> useTextToSpeech -> handleSpeechEnd -> handleSwipe),
+  // we use a ref to hold a stable reference to the `handleSwipe` function.
+  const handleSwipeRef = useRef<(direction: 'next' | 'previous') => void>();
+
+  const handleSpeechEnd = useCallback(() => {
+    if (isPlaying && currentSceneIndex < scenes.length - 1) {
+      setTimeout(() => {
+        handleSwipeRef.current?.('next');
+      }, 500);
+    } else {
+        setIsPlaying(false);
+    }
+  }, [isPlaying, currentSceneIndex, scenes.length]);
+
+  const { speak, stop, isSpeaking } = useTextToSpeech(handleSpeechEnd);
+  
   const handleSwipe = useCallback((direction: 'next' | 'previous') => {
     stop();
     if (direction === 'next' && currentSceneIndex < scenes.length - 1) {
@@ -39,25 +55,18 @@ const StoryScreen: React.FC = () => {
     } else if (direction === 'previous' && currentSceneIndex > 0) {
       setCurrentSceneIndex(prev => prev - 1);
     }
-  }, [currentSceneIndex, scenes.length]);
+  }, [stop, currentSceneIndex, scenes.length]);
 
+  // Keep the ref pointing to the latest version of the callback.
+  handleSwipeRef.current = handleSwipe;
 
-  const handleSpeechEnd = useCallback(() => {
-    if (isPlaying && currentSceneIndex < scenes.length - 1) {
-      setTimeout(() => handleSwipe('next'), 500);
-    } else {
-        setIsPlaying(false);
-    }
-  }, [isPlaying, currentSceneIndex, scenes.length, handleSwipe]);
-
-  const { speak, stop, isSpeaking } = useTextToSpeech(handleSpeechEnd);
 
   useEffect(() => {
-    if (isSpeaking && isPlaying && activeScene && story) {
+    if (isPlaying && activeScene && story) {
       speak(activeScene.text, story.params.language);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeScene, isPlaying]);
+  }, [activeScene, isPlaying, story, speak]);
 
 
   useEffect(() => {
@@ -189,13 +198,17 @@ const StoryScreen: React.FC = () => {
                                 else if (offset.x > 100) handleSwipe('previous');
                             }}
                             animate={{
-                                x: isCurrent ? '0%' : isPast ? '-120%' : '120%',
+                                x: isCurrent ? 0 : (isPast ? -500 : 500),
+                                opacity: isCurrent ? 1 : 0,
                                 scale: isCurrent ? 1 : 0.8,
                                 rotate: isPast ? -10 : 10,
-                                opacity: isCurrent ? 1 : 0,
-                                zIndex: scenes.length - index
+                                zIndex: scenes.length - index,
                             }}
-                            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 300,
+                                damping: 30,
+                            }}
                         >
                             <SceneCard scene={scene} isTop={isCurrent} />
                         </motion.div>
@@ -210,7 +223,7 @@ const StoryScreen: React.FC = () => {
                     {isSpeaking && !isPlaying ? <PauseIcon className="text-orange-500 w-10 h-10" /> : <PlayIcon className="text-orange-500 w-10 h-10" />}
                 </button>
                 <button onClick={handlePlayFullStory} className={`px-4 py-3 rounded-full shadow-lg font-bold transition-colors text-sm ${isPlaying ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
-                    {isPlaying ? 'Stop Story' : 'Play Full Story'}
+                    {isPlaying ? 'Stop Story' : 'Play Story'}
                 </button>
                 <button onClick={() => handleSwipe('next')} disabled={currentSceneIndex === scenes.length - 1} className="p-3 bg-white/80 rounded-full shadow-lg backdrop-blur-sm disabled:opacity-50">
                     <ChevronRightIcon className="text-orange-500 w-8 h-8"/>
