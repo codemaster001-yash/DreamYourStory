@@ -11,6 +11,7 @@ import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { useStoryHistory } from '../hooks/useStoryHistory';
 import { PlayIcon, PauseIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon } from '../components/icons/Icons';
 import { ApiKeyContext } from '../contexts/ApiKeyContext';
+import { VoiceContext } from '../contexts/VoiceContext';
 
 type LoadingState = 'idle' | 'generating_text' | 'generating_images' | 'generating_characters' | 'error' | 'done';
 type LoadingProgress = {
@@ -23,6 +24,7 @@ const StoryScreen: React.FC = () => {
     const navigate = useNavigate();
     const { saveStory, deleteStory, isStorySaved } = useStoryHistory();
     const { apiKey } = useContext(ApiKeyContext);
+    const { voicePreference } = useContext(VoiceContext);
 
     const [story, setStory] = useState<Story | null>(location.state?.story || null);
     const [loadingProgress, setLoadingProgress] = useState<LoadingProgress>({ state: 'idle', message: '' });
@@ -62,7 +64,7 @@ const StoryScreen: React.FC = () => {
         }
     }, [isPlaying, currentSceneIndex, scenes.length]);
 
-    const { speak, stop, isSpeaking } = useTextToSpeech(handleSpeechEnd);
+    const { speak, stop, isSpeaking } = useTextToSpeech(handleSpeechEnd, voicePreference);
 
     const handleSwipe = useCallback((dir: 'next' | 'previous') => {
         stop();

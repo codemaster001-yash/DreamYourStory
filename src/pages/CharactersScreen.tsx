@@ -1,13 +1,14 @@
+
 import React, { useMemo } from 'react';
 import { useStoryHistory } from '../hooks/useStoryHistory';
 import Header from '../components/Header';
 import { Character } from '../types';
 import { useNavigate } from 'react-router-dom';
 
-const CharacterCard: React.FC<{ character: Character }> = ({ character }) => {
+const CharacterCard: React.FC<{ character: Character; onClick: () => void; }> = ({ character, onClick }) => {
     return (
-        <div className="flex flex-col items-center text-center">
-            <div className="w-24 h-24 rounded-full shadow-lg overflow-hidden border-4 border-white bg-orange-200">
+        <div onClick={onClick} className="flex flex-col items-center text-center cursor-pointer group">
+            <div className="w-24 h-24 rounded-full shadow-lg overflow-hidden border-4 border-white bg-orange-200 transform group-hover:scale-110 transition-transform duration-300">
                  {character.imageUrl ? (
                     <img src={character.imageUrl} alt={character.name} className="w-full h-full object-cover" />
                 ) : (
@@ -37,6 +38,10 @@ const CharactersScreen: React.FC = () => {
         return Array.from(uniqueMap.values());
     }, [stories]);
 
+    const handleCharacterClick = (characterName: string) => {
+        navigate('/history', { state: { filterCharacter: characterName } });
+    }
+
     return (
         <div className="p-6">
             <Header title="Characters" subtitle="All the friends you've met" />
@@ -52,7 +57,11 @@ const CharactersScreen: React.FC = () => {
             ) : (
                 <div className="grid grid-cols-3 gap-y-6 gap-x-4">
                     {uniqueCharacters.map(character => (
-                        <CharacterCard key={character.name} character={character} />
+                        <CharacterCard 
+                            key={character.name} 
+                            character={character} 
+                            onClick={() => handleCharacterClick(character.name)} 
+                        />
                     ))}
                 </div>
             )}

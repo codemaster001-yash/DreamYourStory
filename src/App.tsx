@@ -7,13 +7,16 @@ import CharactersScreen from './pages/CharactersScreen';
 import SettingsScreen from './pages/SettingsScreen';
 import BottomNav from './components/BottomNav';
 import { ApiKeyProvider } from './contexts/ApiKeyContext';
+import { VoiceProvider } from './contexts/VoiceContext';
 
 const App: React.FC = () => {
   return (
     <ApiKeyProvider>
-      <HashRouter>
-        <Main />
-      </HashRouter>
+      <VoiceProvider>
+        <HashRouter>
+          <Main />
+        </HashRouter>
+      </VoiceProvider>
     </ApiKeyProvider>
   );
 };

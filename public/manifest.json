@@ -1,6 +1,7 @@
+
 {
-  "short_name": "Story Magic",
-  "name": "AI Storybook for Kids",
+  "short_name": "Dream a Story",
+  "name": "Dream a Story",
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#FB923C",

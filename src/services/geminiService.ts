@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { StoryParams, Scene, Character } from '../types';
 
@@ -68,13 +69,12 @@ export const generateStoryContent = async (params: StoryParams, apiKey: string):
     2.  **Rising Action:** Introduce a problem, a challenge, or a goal for the character. Build up suspense or excitement. (2-3 scenes)
     3.  **Climax:** The turning point of the story where the character faces the main challenge. This should be the most exciting part. (1 scene)
     4.  **Falling Action:** Show the immediate results of the climax. Things start to wind down. (1-2 scenes)
-    5.  **Learning:** The character learns something important or gains a new perspective. This can be a moral lesson or a personal growth moment. (1 scene)
-    6.  **Resolution & Moral:** The story concludes, the problem is solved, and there's a simple, positive moral or lesson learned. (1 scene)
+    5.  **Resolution & Moral:** The story concludes, the problem is solved, and there's a simple, positive moral or lesson learned. (1 scene)
 
-    The total story should be broken down into 6 to 8 scenes.
+    The total story should be broken down into 5 to 8 scenes.
     Each scene should have a narrative part (in ${params.language}) and a separate, detailed image prompt (in English).
     Identify 1-3 main characters and provide their names (in ${params.language}) and a description of them (in English).
-    The tone must be magical, heartwarming, and full of wonder. The story should elevate the curiosity and imagination by creating possibilities in the fertile minds of young children on the topic they are already feeling excited about.
+    The tone must be magical, heartwarming, and full of wonder.
     Structure the output as a JSON object that strictly follows the provided schema.
   `;
 
@@ -109,7 +109,7 @@ export const generateStoryContent = async (params: StoryParams, apiKey: string):
 };
 
 export const generateImage = async (prompt: string, apiKey: string): Promise<string> => {
-    const fullPrompt = `${prompt}, in the style of a vibrant and whimsical children's book illustration, colorful, friendly characters, soft lighting, detailed and magical.`;
+    const fullPrompt = `Illustration for a children's storybook, safe for all ages. ${prompt}. Whimsical, simple, and friendly art style.`;
     try {
         const ai = getAi(apiKey);
         const response = await ai.models.generateImages({
@@ -138,7 +138,7 @@ export const generateImage = async (prompt: string, apiKey: string): Promise<str
 };
 
 export const generateCharacterImage = async (prompt: string, apiKey: string): Promise<string> => {
-    const fullPrompt = `Portrait of ${prompt}, in the style of a vibrant and whimsical children's book character design, friendly face, centered, white background, detailed and magical.`;
+    const fullPrompt = `Character portrait for a children's storybook, safe for all ages. ${prompt}. Simple, clean background, friendly face.`;
      try {
         const ai = getAi(apiKey);
         const response = await ai.models.generateImages({

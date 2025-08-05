@@ -1,5 +1,6 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import React, { useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useStoryHistory } from '../hooks/useStoryHistory';
 import Header from '../components/Header';
 import { Story } from '../types';
@@ -34,6 +35,18 @@ const StoryHistoryCard: React.FC<{ story: Story; onClick: () => void; onDelete: 
 const HistoryScreen: React.FC = () => {
   const { stories, deleteStory } = useStoryHistory();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const filterCharacter = location.state?.filterCharacter;
+
+  const filteredStories = useMemo(() => {
+    if (!filterCharacter) {
+      return stories;
+    }
+    return stories.filter(story => 
+      story.characters.some(char => char.name === filterCharacter)
+    );
+  }, [stories, filterCharacter]);
 
   const handleStoryClick = (story: Story) => {
     navigate('/story', { state: { story } });
@@ -48,18 +61,18 @@ const HistoryScreen: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Header title="My Storybook" subtitle="Revisit your favorite tales" />
+      <Header title="My Storybook" subtitle={filterCharacter ? `Stories featuring ${filterCharacter}` : "Revisit your favorite tales"} />
       
-      {stories.length === 0 ? (
+      {filteredStories.length === 0 ? (
         <div className="text-center py-20">
-            <p className="text-gray-500">You haven't saved any stories yet.</p>
-            <button onClick={() => navigate('/')} className="mt-4 px-6 py-2 bg-orange-500 text-white font-bold rounded-full shadow-md hover:bg-orange-600">
-                Create a New Story
+            <p className="text-gray-500">{filterCharacter ? `No stories found with ${filterCharacter}.` : "You haven't saved any stories yet."}</p>
+            <button onClick={() => navigate(filterCharacter ? '/characters' : '/')} className="mt-4 px-6 py-2 bg-orange-500 text-white font-bold rounded-full shadow-md hover:bg-orange-600">
+                {filterCharacter ? 'Back to Characters' : 'Create a New Story'}
             </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
-          {stories.map(story => (
+          {filteredStories.map(story => (
             <StoryHistoryCard 
                 key={story.id} 
                 story={story} 

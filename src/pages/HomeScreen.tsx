@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gender, StoryParams } from '../types';
@@ -25,7 +26,7 @@ const HomeScreen: React.FC = () => {
     <div className="p-6 h-full flex flex-col">
       <Header title="Dream a Story" subtitle="Let's create a new adventure!" />
       
-      <form onSubmit={handleGenerate} className="flex-grow flex flex-col space-y-6">
+      <form onSubmit={handleGenerate} className="flex-grow flex flex-col space-y-6 pb-6">
         <div>
           <label className="text-lg font-bold text-gray-700">Who is the story for?</label>
           <div className="mt-2 grid grid-cols-3 gap-3">
@@ -66,7 +67,7 @@ const HomeScreen: React.FC = () => {
         </div>
 
         <div>
-          <label htmlFor="theme" className="text-lg font-bold text-gray-700">What's is the story about?</label>
+          <label htmlFor="theme" className="text-lg font-bold text-gray-700">What's the story about?</label>
           <input
             type="text"
             id="theme"
@@ -89,7 +90,7 @@ const HomeScreen: React.FC = () => {
         <button type="submit" disabled={!theme.trim() || !language.trim()} className="w-full flex items-center justify-center p-4 bg-orange-500 text-white font-bold text-xl rounded-2xl shadow-lg hover:bg-orange-600 disabled:bg-gray-300 disabled:shadow-none transition-all duration-300 transform hover:scale-105">
           <SparklesIcon className="w-6 h-6 mr-3" />
           Create My Story
-        </button><br></br>
+        </button>
       </form>
     </div>
   );

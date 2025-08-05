@@ -4,6 +4,8 @@ export enum Gender {
   UNSPECIFIED = 'child',
 }
 
+export type VoicePreference = 'auto' | 'male' | 'female' | 'boy' | 'girl';
+
 export interface StoryParams {
   gender: Gender;
   age: number;
