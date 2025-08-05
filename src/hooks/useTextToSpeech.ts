@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-export const useTextToSpeech = (onEndCallback: () => void) => {
+export const useTextToSpeech = (onEndCallback: (event: SpeechSynthesisEvent) => void) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -16,10 +16,10 @@ export const useTextToSpeech = (onEndCallback: () => void) => {
         setIsSpeaking(true);
         setIsPaused(false);
     };
-    utterance.onend = () => {
+    utterance.onend = (event) => {
       setIsSpeaking(false);
       setIsPaused(false);
-      onEndCallback();
+      onEndCallback(event);
     };
     utterance.onerror = (e) => {
       console.error("SpeechSynthesis Error", e);

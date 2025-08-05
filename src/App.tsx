@@ -4,13 +4,17 @@ import HomeScreen from './pages/HomeScreen';
 import StoryScreen from './pages/StoryScreen';
 import HistoryScreen from './pages/HistoryScreen';
 import CharactersScreen from './pages/CharactersScreen';
+import SettingsScreen from './pages/SettingsScreen';
 import BottomNav from './components/BottomNav';
+import { ApiKeyProvider } from './contexts/ApiKeyContext';
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
-      <Main />
-    </HashRouter>
+    <ApiKeyProvider>
+      <HashRouter>
+        <Main />
+      </HashRouter>
+    </ApiKeyProvider>
   );
 };
 
@@ -26,6 +30,7 @@ const Main: React.FC = () => {
           <Route path="/story" element={<StoryScreen />} />
           <Route path="/history" element={<HistoryScreen />} />
           <Route path="/characters" element={<CharactersScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
         </Routes>
       </main>
       {showBottomNav && <BottomNav />}

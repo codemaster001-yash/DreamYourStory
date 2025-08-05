@@ -1,245 +1,270 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+
+
+import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { generateStoryContent, generateImage, generateCharacterImage } from '../services/geminiService';
-import { Story, StoryParams } from '../types';
+import { Story, StoryParams, Scene, Character } from '../types';
 import Loader from '../components/Loader';
 import SceneCard from '../components/SceneCard';
 import { useTextToSpeech } from '../hooks/useTextToSpeech';
 import { useStoryHistory } from '../hooks/useStoryHistory';
-import { PlayIcon, PauseIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon } from '../components/icons/Icons';
+import { PlayIcon, PauseIcon, HeartIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon } from '../components/icons/Icons';
+import { ApiKeyContext } from '../contexts/ApiKeyContext';
 
 type LoadingState = 'idle' | 'generating_text' | 'generating_images' | 'generating_characters' | 'error' | 'done';
+type LoadingProgress = {
+    state: LoadingState;
+    message: string;
+};
 
 const StoryScreen: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { saveStory, isStorySaved } = useStoryHistory();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { saveStory, deleteStory, isStorySaved } = useStoryHistory();
+    const { apiKey } = useContext(ApiKeyContext);
 
-  const [story, setStory] = useState<Story | null>(location.state?.story || null);
-  const [loadingState, setLoadingState] = useState<LoadingState>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+    const [story, setStory] = useState<Story | null>(location.state?.story || null);
+    const [loadingProgress, setLoadingProgress] = useState<LoadingProgress>({ state: 'idle', message: '' });
+    const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isSaved, setIsSaved] = useState(false);
+    const direction = useRef(1);
 
-  useEffect(() => {
-    if (story) {
-        setIsSaved(isStorySaved(story.id));
-    }
-  }, [story, isStorySaved]);
+    useEffect(() => {
+        if (story) {
+            setIsSaved(isStorySaved(story.id));
+        }
+    }, [story, isStorySaved]);
 
-  const scenes = useMemo(() => story?.scenes || [], [story]);
-  const activeScene = scenes[currentSceneIndex];
+    const scenes = useMemo(() => story?.scenes || [], [story]);
+    const activeScene = scenes[currentSceneIndex];
 
-  // To break a dependency cycle (handleSwipe -> stop -> useTextToSpeech -> handleSpeechEnd -> handleSwipe),
-  // we use a ref to hold a stable reference to the `handleSwipe` function.
-  const handleSwipeRef = useRef<(direction: 'next' | 'previous') => void>();
+    const handleSwipeRef = useRef<((dir: 'next' | 'previous') => void) | null>(null);
 
-  const handleSpeechEnd = useCallback(() => {
-    if (isPlaying && currentSceneIndex < scenes.length - 1) {
-      setTimeout(() => {
-        handleSwipeRef.current?.('next');
-      }, 500);
-    } else {
-        setIsPlaying(false);
-    }
-  }, [isPlaying, currentSceneIndex, scenes.length]);
+    const handleSpeechEnd = useCallback((_event: SpeechSynthesisEvent) => {
+        if (isPlaying && currentSceneIndex < scenes.length - 1) {
+            setTimeout(() => {
+                handleSwipeRef.current?.('next');
+            }, 500);
+        } else {
+            setIsPlaying(false);
+        }
+    }, [isPlaying, currentSceneIndex, scenes.length]);
 
-  const { speak, stop, isSpeaking } = useTextToSpeech(handleSpeechEnd);
-  
-  const handleSwipe = useCallback((direction: 'next' | 'previous') => {
-    stop();
-    if (direction === 'next' && currentSceneIndex < scenes.length - 1) {
-      setCurrentSceneIndex(prev => prev + 1);
-    } else if (direction === 'previous' && currentSceneIndex > 0) {
-      setCurrentSceneIndex(prev => prev - 1);
-    }
-  }, [stop, currentSceneIndex, scenes.length]);
+    const { speak, stop, isSpeaking } = useTextToSpeech(handleSpeechEnd);
 
-  // Keep the ref pointing to the latest version of the callback.
-  handleSwipeRef.current = handleSwipe;
-
-
-  useEffect(() => {
-    if (isPlaying && activeScene && story) {
-      speak(activeScene.text, story.params.language);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeScene, isPlaying, story, speak]);
+    const handleSwipe = useCallback((dir: 'next' | 'previous') => {
+        stop();
+        if (dir === 'next' && currentSceneIndex < scenes.length - 1) {
+            direction.current = 1;
+            setCurrentSceneIndex(prev => prev + 1);
+        } else if (dir === 'previous' && currentSceneIndex > 0) {
+            direction.current = -1;
+            setCurrentSceneIndex(prev => prev - 1);
+        }
+    }, [stop, currentSceneIndex, scenes.length]);
+    
+    useEffect(() => {
+      handleSwipeRef.current = handleSwipe;
+    }, [handleSwipe]);
 
 
-  useEffect(() => {
-    const generateNewStory = async (params: StoryParams) => {
-      try {
-        setLoadingState('generating_text');
-        const { title, scenes: rawScenes, characters: rawCharacters } = await generateStoryContent(params);
-        
-        const scenesWithIds = rawScenes.map((s, i) => ({ ...s, id: `${Date.now()}-${i}`, imageUrl: undefined }));
-        
-        const newStory: Story = {
-            id: `${Date.now()}`,
-            title,
-            params,
-            scenes: scenesWithIds,
-            characters: rawCharacters.map(c => ({...c, imageUrl: undefined})),
-            createdAt: Date.now()
+    useEffect(() => {
+        if (isPlaying && activeScene && story) {
+            speak(activeScene.text, story.params.language);
+        }
+    }, [activeScene, isPlaying, story, speak]);
+
+
+    useEffect(() => {
+        const generateNewStory = async (params: StoryParams) => {
+            if (!apiKey) {
+                setLoadingProgress({ state: 'error', message: "Please set your API Key in Settings before creating a story." });
+                return;
+            }
+            try {
+                // 1. Generate story text and prompts
+                setLoadingProgress({ state: 'generating_text', message: 'Once upon a time...' });
+                const content = await generateStoryContent(params, apiKey);
+
+                const newStory: Story = {
+                    id: `story_${Date.now()}`,
+                    title: content.title,
+                    params: params,
+                    scenes: content.scenes.map((s, i) => ({ ...s, id: `scene_${i}` })),
+                    characters: content.characters,
+                    createdAt: Date.now(),
+                };
+                setStory(newStory);
+
+                // 2. Generate scene images
+                setLoadingProgress({ state: 'generating_images', message: 'Painting the scenes...' });
+                const scenePromises = newStory.scenes.map(async (scene, index) => {
+                    const imageUrl = await generateImage(scene.imagePrompt, apiKey);
+                    setStory(currentStory => {
+                        if (!currentStory) return null;
+                        const updatedScenes = [...currentStory.scenes];
+                        updatedScenes[index].imageUrl = imageUrl;
+                        return { ...currentStory, scenes: updatedScenes };
+                    });
+                });
+                await Promise.all(scenePromises);
+                
+                // 3. Generate character portraits
+                setLoadingProgress({ state: 'generating_characters', message: 'Meeting the characters...' });
+                const characterPromises = newStory.characters.map(async (character, index) => {
+                    const imageUrl = await generateCharacterImage(character.description, apiKey);
+                     setStory(currentStory => {
+                        if (!currentStory) return null;
+                        const updatedCharacters = [...currentStory.characters];
+                        updatedCharacters[index].imageUrl = imageUrl;
+                        return { ...currentStory, characters: updatedCharacters };
+                    });
+                });
+                await Promise.all(characterPromises);
+
+                setLoadingProgress({ state: 'done', message: 'Your story is ready!' });
+
+            } catch (error) {
+                console.error("Story generation failed:", error);
+                const message = error instanceof Error ? error.message : "An unknown error occurred.";
+                setLoadingProgress({ state: 'error', message });
+            }
         };
-        setStory(newStory);
-        setCurrentSceneIndex(0);
-        
-        setLoadingState('generating_images');
-        const imagePromises = newStory.scenes.map(scene => generateImage(scene.imagePrompt));
-        const imageUrls = await Promise.all(imagePromises);
 
-        setStory(prev => {
-            if (!prev) return null;
-            const updatedScenes = prev.scenes.map((scene, i) => ({ ...scene, imageUrl: imageUrls[i] }));
-            return { ...prev, scenes: updatedScenes };
-        });
+        if (!story && location.state?.params) {
+            generateNewStory(location.state.params);
+        } else if(story) {
+             setLoadingProgress({ state: 'done', message: '' });
+        }
 
-        setLoadingState('generating_characters');
-        const characterImagePromises = newStory.characters.map(char => generateCharacterImage(char.description));
-        const characterImageUrls = await Promise.all(characterImagePromises);
-        setStory(prev => {
-            if (!prev) return null;
-            const updatedCharacters = prev.characters.map((char, i) => ({ ...char, imageUrl: characterImageUrls[i] }));
-            return { ...prev, characters: updatedCharacters };
-        });
-
-
-        setLoadingState('done');
-
-      } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
-        setLoadingState('error');
-      }
+    }, [location.state, story, navigate, apiKey]);
+    
+    const handleToggleSave = () => {
+        if (!story) return;
+        if (isSaved) {
+            deleteStory(story.id);
+            setIsSaved(false);
+        } else {
+            saveStory(story);
+            setIsSaved(true);
+        }
     };
     
-    if (location.state?.params && !story) {
-      generateNewStory(location.state.params);
-    } else if (story) {
-        setCurrentSceneIndex(0);
-        setLoadingState('done');
-    } else {
-      navigate('/');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, navigate]);
-
-  const handlePlayPause = () => {
-    if (isSpeaking) {
-        stop();
-    } else if (activeScene && story){
-        speak(activeScene.text, story.params.language);
-    }
-  }
-
-  const handlePlayFullStory = () => {
-    if(isPlaying){
+    const togglePlayPause = () => {
+      if (isSpeaking) {
         stop();
         setIsPlaying(false);
-    } else if (activeScene && story) {
+      } else {
         setIsPlaying(true);
-        speak(activeScene.text, story.params.language);
-    }
-  }
+      }
+    };
 
-  const handleSave = () => {
-    if (story && !isSaved) {
-        saveStory(story).then(() => {
-            setIsSaved(true);
-        });
-    }
-  }
+    const renderContent = () => {
+        if (loadingProgress.state !== 'done' && loadingProgress.state !== 'error') {
+            return <div className="w-full h-full flex items-center justify-center"><Loader text={loadingProgress.message} /></div>;
+        }
 
-  const renderContent = () => {
-    if (loadingState === 'generating_text' || loadingState === 'idle') {
-      return <Loader text="Dreaming up a new story..." />;
-    }
-    if (loadingState === 'generating_images') {
-      return <Loader text="Painting the scenes..." />;
-    }
-     if (loadingState === 'generating_characters') {
-      return <Loader text="Bringing characters to life..." />;
-    }
-    if (loadingState === 'error') {
-      return (
-        <div className="p-8 text-center text-red-600">
-          <h2 className="text-2xl font-bold mb-4">Oh no!</h2>
-          <p>{errorMessage}</p>
-          <button onClick={() => navigate('/')} className="mt-6 px-6 py-2 bg-orange-500 text-white rounded-full">Try Again</button>
-        </div>
-      );
-    }
-    if (loadingState === 'done' && story) {
+        if (loadingProgress.state === 'error') {
+            return (
+                <div className="flex flex-col items-center justify-center text-center p-8 h-full">
+                    <h2 className="text-2xl font-bold text-red-500">Oh no!</h2>
+                    <p className="mt-2 text-gray-600">{loadingProgress.message}</p>
+                    <button onClick={() => navigate('/')} className="mt-6 px-6 py-3 bg-orange-500 text-white font-bold rounded-full shadow-lg hover:bg-orange-600">
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+
+        if (!story || scenes.length === 0) {
+            return (
+                <div className="text-center p-8">
+                     <p className="text-gray-500">Something went wrong. Story not found.</p>
+                     <button onClick={() => navigate('/')} className="mt-4 px-6 py-2 bg-orange-500 text-white font-bold rounded-full shadow-md hover:bg-orange-600">
+                        Go Home
+                    </button>
+                </div>
+            )
+        }
+        
+        const variants = {
+            enter: (direction: number) => ({
+                x: direction > 0 ? 1000 : -1000,
+                opacity: 0,
+            }),
+            center: {
+                zIndex: 1,
+                x: 0,
+                opacity: 1,
+            },
+            exit: (direction: number) => ({
+                zIndex: 0,
+                x: direction < 0 ? 1000 : -1000,
+                opacity: 0,
+            }),
+        };
+
         return (
-            <div className="w-full h-full flex flex-col">
-              <div className="p-4 flex justify-between items-center text-gray-700 z-50">
-                <button onClick={() => navigate(-1)} className="font-bold text-sm bg-white/50 px-3 py-1 rounded-full backdrop-blur-sm"> &lt; Back</button>
-                <h2 className="font-bold text-lg truncate px-2 text-center flex-1">{story.title}</h2>
-                <button onClick={handleSave} className={`${isSaved ? 'text-red-500 cursor-default' : 'text-gray-400'}`} disabled={isSaved}>
-                    <HeartIcon isFilled={isSaved}/>
-                </button>
-              </div>
-              <div className="flex-grow relative p-4">
-                {scenes.map((scene, index) => {
-                    const isCurrent = index === currentSceneIndex;
-                    const isPast = index < currentSceneIndex;
-                    
-                    return (
+            <div className="w-full h-full flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                <div className="w-full aspect-[9/16] max-w-sm max-h-full relative">
+                    <AnimatePresence initial={false} custom={direction.current}>
                         <motion.div
-                            key={scene.id}
-                            className="absolute inset-x-4 inset-y-0"
-                            drag={isCurrent ? 'x' : false}
-                            dragConstraints={{ left: 0, right: 0 }}
-                            onDragEnd={(e, { offset }) => {
-                                if (offset.x < -100) handleSwipe('next');
-                                else if (offset.x > 100) handleSwipe('previous');
-                            }}
-                            animate={{
-                                x: isCurrent ? 0 : (isPast ? -500 : 500),
-                                opacity: isCurrent ? 1 : 0,
-                                scale: isCurrent ? 1 : 0.8,
-                                rotate: isPast ? -10 : 10,
-                                zIndex: scenes.length - index,
-                            }}
+                            key={currentSceneIndex}
+                            className="w-full h-full absolute"
+                            custom={direction.current}
+                            variants={variants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
                             transition={{
-                                type: "spring",
-                                stiffness: 300,
-                                damping: 30,
+                                x: { type: 'spring', stiffness: 300, damping: 30 },
+                                opacity: { duration: 0.2 },
+                            }}
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0 }}
+                            dragElastic={1}
+                            onDragEnd={(_e, { offset, velocity }) => {
+                                const swipe = Math.abs(offset.x) * velocity.x;
+                                if (swipe < -10000) {
+                                    handleSwipe('next');
+                                } else if (swipe > 10000) {
+                                    handleSwipe('previous');
+                                }
                             }}
                         >
-                            <SceneCard scene={scene} isTop={isCurrent} />
+                            <SceneCard scene={scenes[currentSceneIndex]} isTop={true} />
                         </motion.div>
-                    )
-                })}
-              </div>
-               <div className="p-4 flex justify-center items-center space-x-4">
-                <button onClick={() => handleSwipe('previous')} disabled={currentSceneIndex === 0} className="p-3 bg-white/80 rounded-full shadow-lg backdrop-blur-sm disabled:opacity-50">
-                    <ChevronLeftIcon className="text-orange-500 w-8 h-8"/>
-                </button>
-                <button onClick={handlePlayPause} className="p-3 bg-white/80 rounded-full shadow-lg backdrop-blur-sm">
-                    {isSpeaking && !isPlaying ? <PauseIcon className="text-orange-500 w-10 h-10" /> : <PlayIcon className="text-orange-500 w-10 h-10" />}
-                </button>
-                <button onClick={handlePlayFullStory} className={`px-4 py-3 rounded-full shadow-lg font-bold transition-colors text-sm ${isPlaying ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
-                    {isPlaying ? 'Stop Story' : 'Play Story'}
-                </button>
-                <button onClick={() => handleSwipe('next')} disabled={currentSceneIndex === scenes.length - 1} className="p-3 bg-white/80 rounded-full shadow-lg backdrop-blur-sm disabled:opacity-50">
-                    <ChevronRightIcon className="text-orange-500 w-8 h-8"/>
-                </button>
-               </div>
+                    </AnimatePresence>
+                </div>
+                 <div className="absolute top-4 left-4">
+                    <button onClick={() => navigate('/')} className="bg-white/70 backdrop-blur-sm p-2 rounded-full shadow-md text-gray-700 hover:bg-white">
+                        <HomeIcon className="w-6 h-6" />
+                    </button>
+                </div>
+                 <div className="absolute top-4 right-4">
+                    <button onClick={handleToggleSave} className={`bg-white/70 backdrop-blur-sm p-2 rounded-full shadow-md ${isSaved ? 'text-red-500' : 'text-gray-600'} hover:bg-white`}>
+                        <HeartIcon isFilled={isSaved} className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="mt-4 flex items-center justify-center space-x-8">
+                     <button onClick={() => handleSwipe('previous')} disabled={currentSceneIndex === 0} className="text-orange-500 disabled:text-gray-300 p-2">
+                        <ChevronLeftIcon className="w-10 h-10" />
+                    </button>
+                    <button onClick={togglePlayPause} className="text-orange-500 p-2">
+                        {isSpeaking ? <PauseIcon className="w-16 h-16"/> : <PlayIcon className="w-16 h-16"/>}
+                    </button>
+                     <button onClick={() => handleSwipe('next')} disabled={currentSceneIndex === scenes.length - 1} className="text-orange-500 disabled:text-gray-300 p-2">
+                        <ChevronRightIcon className="w-10 h-10" />
+                    </button>
+                </div>
             </div>
         );
-    }
-    return null;
-  };
+    };
 
-  return (
-    <div className="h-full w-full flex flex-col justify-center items-center overflow-hidden bg-gradient-to-b from-orange-50 to-amber-100">
-        {renderContent()}
-    </div>
-  );
+    return renderContent();
 };
 
 export default StoryScreen;

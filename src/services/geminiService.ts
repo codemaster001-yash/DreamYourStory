@@ -1,14 +1,15 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { StoryParams, Scene, Character } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const storyGenerationModel = "gemini-2.5-flash";
 const imageGenerationModel = 'imagen-3.0-generate-002';
+
+const getAi = (apiKey: string) => {
+    if (!apiKey) {
+        throw new Error("API Key not set. Please go to Settings to add your key.");
+    }
+    return new GoogleGenAI({ apiKey });
+};
 
 const storySchema = {
     type: Type.OBJECT,
@@ -57,7 +58,7 @@ const storySchema = {
     required: ["title", "scenes", "characters"]
 };
 
-export const generateStoryContent = async (params: StoryParams): Promise<{title: string; scenes: Omit<Scene, 'id' | 'imageUrl'>[]; characters: Omit<Character, 'imageUrl'>[]}> => {
+export const generateStoryContent = async (params: StoryParams, apiKey: string): Promise<{title: string; scenes: Omit<Scene, 'id' | 'imageUrl'>[]; characters: Omit<Character, 'imageUrl'>[]}> => {
   const prompt = `
     Generate a complete and engaging story for a ${params.age}-year-old ${params.gender}, with the theme of "${params.theme}".
     The story and its title MUST be written in the following language: ${params.language}.
@@ -77,6 +78,7 @@ export const generateStoryContent = async (params: StoryParams): Promise<{title:
   `;
 
   try {
+    const ai = getAi(apiKey);
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: storyGenerationModel,
       contents: prompt,
@@ -98,13 +100,17 @@ export const generateStoryContent = async (params: StoryParams): Promise<{title:
 
   } catch (error) {
     console.error("Error generating story content:", error);
+    if (error instanceof Error && error.message.includes("API Key not set")) {
+        throw error;
+    }
     throw new Error("Failed to create the story's plot. Please try a different theme.");
   }
 };
 
-export const generateImage = async (prompt: string): Promise<string> => {
+export const generateImage = async (prompt: string, apiKey: string): Promise<string> => {
     const fullPrompt = `${prompt}, in the style of a vibrant and whimsical children's book illustration, colorful, friendly characters, soft lighting, detailed and magical.`;
     try {
+        const ai = getAi(apiKey);
         const response = await ai.models.generateImages({
             model: imageGenerationModel,
             prompt: fullPrompt,
@@ -123,13 +129,17 @@ export const generateImage = async (prompt: string): Promise<string> => {
         }
     } catch (error) {
         console.error("Error generating image:", error);
+        if (error instanceof Error && error.message.includes("API Key not set")) {
+            throw error;
+        }
         throw new Error("Failed to create an image for a scene.");
     }
 };
 
-export const generateCharacterImage = async (prompt: string): Promise<string> => {
+export const generateCharacterImage = async (prompt: string, apiKey: string): Promise<string> => {
     const fullPrompt = `Portrait of ${prompt}, in the style of a vibrant and whimsical children's book character design, friendly face, centered, white background, detailed and magical.`;
      try {
+        const ai = getAi(apiKey);
         const response = await ai.models.generateImages({
             model: imageGenerationModel,
             prompt: fullPrompt,
@@ -148,6 +158,9 @@ export const generateCharacterImage = async (prompt: string): Promise<string> =>
         }
     } catch (error) {
         console.error("Error generating character image:", error);
+        if (error instanceof Error && error.message.includes("API Key not set")) {
+            throw error;
+        }
         throw new Error("Failed to create an image for a character.");
     }
 }

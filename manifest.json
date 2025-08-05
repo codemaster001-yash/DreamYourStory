@@ -1,8 +1,0 @@
-{
-  "short_name": "Story Magic",
-  "name": "AI Storybook for Kids",
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#FB923C",
-  "background_color": "#FFF7ED"
-}

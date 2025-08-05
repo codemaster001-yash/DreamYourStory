@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { HomeIcon, BookOpenIcon, UsersIcon } from './icons/Icons';
+import { HomeIcon, BookOpenIcon, UsersIcon, CogIcon } from './icons/Icons';
 
 const BottomNav: React.FC = () => {
   const commonClasses = "flex flex-col items-center justify-center p-2 rounded-lg transition-colors duration-200 w-20";
@@ -21,6 +21,10 @@ const BottomNav: React.FC = () => {
         <NavLink to="/characters" className={({ isActive }) => `${commonClasses} ${isActive ? activeClass : inactiveClass}`}>
           <UsersIcon />
           <span className="text-xs mt-1 font-bold">Characters</span>
+        </NavLink>
+        <NavLink to="/settings" className={({ isActive }) => `${commonClasses} ${isActive ? activeClass : inactiveClass}`}>
+          <CogIcon />
+          <span className="text-xs mt-1 font-bold">Settings</span>
         </NavLink>
       </div>
     </nav>
