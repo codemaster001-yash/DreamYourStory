@@ -1,4 +1,5 @@
 import React from 'react';
+import FullscreenButton from "./FullscreenButton";
 
 interface HeaderProps {
   title: string;
@@ -8,6 +9,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
   return (
     <header className="p-6 text-center">
+      <FullscreenButton />
       <h1 className="text-4xl font-extrabold text-orange-600">{title}</h1>
       {subtitle && <p className="text-gray-500 mt-2">{subtitle}</p>}
     </header>

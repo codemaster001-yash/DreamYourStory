@@ -3,7 +3,7 @@ import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { StoryParams, Scene, Character } from '../types';
 
 const storyGenerationModel = "gemini-2.5-flash";
-const imageGenerationModel = 'imagen-3.0-generate-002';
+const imageGenerationModel = "imagen-3.0-generate-002";
 
 const getAi = (apiKey: string) => {
     if (!apiKey) {

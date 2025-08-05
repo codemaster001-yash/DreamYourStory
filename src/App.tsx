@@ -8,6 +8,7 @@ import SettingsScreen from './pages/SettingsScreen';
 import BottomNav from './components/BottomNav';
 import { ApiKeyProvider } from './contexts/ApiKeyContext';
 import { VoiceProvider } from './contexts/VoiceContext';
+import Header from './components/Header';
 
 const App: React.FC = () => {
   return (
@@ -27,7 +28,8 @@ const Main: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col items-center bg-gradient-to-b from-orange-50 to-amber-100 font-sans">
-      <main className="flex-grow w-full max-w-md mx-auto overflow-y-auto no-scrollbar">
+      <main className="relative flex-grow w-full max-w-md mx-auto overflow-y-auto no-scrollbar">
+        <Header />
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/story" element={<StoryScreen />} />
