@@ -68,12 +68,13 @@ export const generateStoryContent = async (params: StoryParams, apiKey: string):
     2.  **Rising Action:** Introduce a problem, a challenge, or a goal for the character. Build up suspense or excitement. (2-3 scenes)
     3.  **Climax:** The turning point of the story where the character faces the main challenge. This should be the most exciting part. (1 scene)
     4.  **Falling Action:** Show the immediate results of the climax. Things start to wind down. (1-2 scenes)
-    5.  **Resolution & Moral:** The story concludes, the problem is solved, and there's a simple, positive moral or lesson learned. (1 scene)
+    5.  **Learning:** The character learns something important or gains a new perspective. This can be a moral lesson or a personal growth moment. (1 scene)
+    6.  **Resolution & Moral:** The story concludes, the problem is solved, and there's a simple, positive moral or lesson learned. (1 scene)
 
-    The total story should be broken down into 5 to 8 scenes.
+    The total story should be broken down into 6 to 8 scenes.
     Each scene should have a narrative part (in ${params.language}) and a separate, detailed image prompt (in English).
     Identify 1-3 main characters and provide their names (in ${params.language}) and a description of them (in English).
-    The tone must be magical, heartwarming, and full of wonder.
+    The tone must be magical, heartwarming, and full of wonder. The story should elevate the curiosity and imagination by creating possibilities in the fertile minds of young children on the topic they are already feeling excited about.
     Structure the output as a JSON object that strictly follows the provided schema.
   `;
 

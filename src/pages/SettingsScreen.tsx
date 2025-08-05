@@ -23,22 +23,26 @@ const SettingsScreen: React.FC = () => {
 
   return (
     <div className="p-6 h-full flex flex-col">
-      <Header title="Settings" subtitle="Configure your app" />
+      <Header title="Settings" subtitle="Configure your API" />
 
       <form onSubmit={handleSave} className="flex-grow flex flex-col space-y-6">
         <div>
           <label htmlFor="apiKey" className="text-lg font-bold text-gray-700">Gemini API Key</label>
           <p className="text-sm text-gray-500 mt-1 mb-2">
-            Your key is saved only on this device and never sent to anyone except Google for API calls.
+            Your key is saved only on this device and never sent to anyone except Google for API calls. 
           </p>
           <input
-            type="password"
+            type="text"
             id="apiKey"
             value={localKey}
             onChange={(e) => setLocalKey(e.target.value)}
             placeholder="Enter your API key here"
-            className="w-full p-4 rounded-xl border border-gray-300 shadow-md focus:ring-2 focus:ring-orange-400 focus:outline-none"
+            className="w-full p-3 rounded-xl border border-gray-300 shadow-md focus:ring-2 focus:ring-orange-400 focus:outline-none text-sm"
           />
+          <p className="text-sm text-gray-500 mt-1 mb-2">
+            (Preferred Gemini 2.5 Flash model and above) 
+          </p>
+          
         </div>
         
         <div className="flex-grow"></div>

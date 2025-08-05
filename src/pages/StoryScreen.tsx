@@ -29,6 +29,7 @@ const StoryScreen: React.FC = () => {
     const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
     const direction = useRef(1);
 
     useEffect(() => {
@@ -36,6 +37,15 @@ const StoryScreen: React.FC = () => {
             setIsSaved(isStorySaved(story.id));
         }
     }, [story, isStorySaved]);
+
+    useEffect(() => {
+        if (toastMessage) {
+            const timer = setTimeout(() => {
+                setToastMessage(null);
+            }, 5000); // Hide after 5 seconds
+            return () => clearTimeout(timer);
+        }
+    }, [toastMessage]);
 
     const scenes = useMemo(() => story?.scenes || [], [story]);
     const activeScene = scenes[currentSceneIndex];
@@ -84,7 +94,7 @@ const StoryScreen: React.FC = () => {
                 return;
             }
             try {
-                // 1. Generate story text and prompts
+                // 1. Generate story text and prompts (critical path)
                 setLoadingProgress({ state: 'generating_text', message: 'Once upon a time...' });
                 const content = await generateStoryContent(params, apiKey);
 
@@ -98,36 +108,56 @@ const StoryScreen: React.FC = () => {
                 };
                 setStory(newStory);
 
-                // 2. Generate scene images
+                let errorToastShown = false;
+                const showToast = (message: string) => {
+                    if (!errorToastShown) {
+                        setToastMessage(message);
+                        errorToastShown = true;
+                    }
+                }
+
+                // 2. Generate scene images (non-critical)
                 setLoadingProgress({ state: 'generating_images', message: 'Painting the scenes...' });
-                const scenePromises = newStory.scenes.map(async (scene, index) => {
-                    const imageUrl = await generateImage(scene.imagePrompt, apiKey);
-                    setStory(currentStory => {
-                        if (!currentStory) return null;
-                        const updatedScenes = [...currentStory.scenes];
-                        updatedScenes[index].imageUrl = imageUrl;
-                        return { ...currentStory, scenes: updatedScenes };
-                    });
+                const sceneImagePromises = newStory.scenes.map(scene => generateImage(scene.imagePrompt, apiKey));
+                const sceneResults = await Promise.allSettled(sceneImagePromises);
+
+                sceneResults.forEach((result, index) => {
+                    if (result.status === 'fulfilled') {
+                        setStory(currentStory => {
+                            if (!currentStory) return null;
+                            const updatedScenes = [...currentStory.scenes];
+                            if (updatedScenes[index]) updatedScenes[index].imageUrl = result.value;
+                            return { ...currentStory, scenes: updatedScenes };
+                        });
+                    } else {
+                        console.error(`Failed to generate image for scene ${index}:`, result.reason);
+                        showToast("Some images couldn't be created, but the story continues!");
+                    }
                 });
-                await Promise.all(scenePromises);
                 
-                // 3. Generate character portraits
+                // 3. Generate character portraits (non-critical)
                 setLoadingProgress({ state: 'generating_characters', message: 'Meeting the characters...' });
-                const characterPromises = newStory.characters.map(async (character, index) => {
-                    const imageUrl = await generateCharacterImage(character.description, apiKey);
-                     setStory(currentStory => {
-                        if (!currentStory) return null;
-                        const updatedCharacters = [...currentStory.characters];
-                        updatedCharacters[index].imageUrl = imageUrl;
-                        return { ...currentStory, characters: updatedCharacters };
-                    });
+                const characterImagePromises = newStory.characters.map(character => generateCharacterImage(character.description, apiKey));
+                const characterResults = await Promise.allSettled(characterImagePromises);
+
+                characterResults.forEach((result, index) => {
+                     if (result.status === 'fulfilled') {
+                        setStory(currentStory => {
+                            if (!currentStory) return null;
+                            const updatedCharacters = [...currentStory.characters];
+                            if (updatedCharacters[index]) updatedCharacters[index].imageUrl = result.value;
+                            return { ...currentStory, characters: updatedCharacters };
+                        });
+                    } else {
+                        console.error(`Failed to generate image for character ${index}:`, result.reason);
+                        showToast("A character portrait couldn't be created, but the story goes on!");
+                    }
                 });
-                await Promise.all(characterPromises);
 
                 setLoadingProgress({ state: 'done', message: 'Your story is ready!' });
 
             } catch (error) {
-                console.error("Story generation failed:", error);
+                console.error("Critical story generation failed:", error);
                 const message = error instanceof Error ? error.message : "An unknown error occurred.";
                 setLoadingProgress({ state: 'error', message });
             }
@@ -238,12 +268,12 @@ const StoryScreen: React.FC = () => {
                         </motion.div>
                     </AnimatePresence>
                 </div>
-                 <div className="absolute top-4 left-4">
+                 <div className="absolute top-4 left-4 z-10">
                     <button onClick={() => navigate('/')} className="bg-white/70 backdrop-blur-sm p-2 rounded-full shadow-md text-gray-700 hover:bg-white">
                         <HomeIcon className="w-6 h-6" />
                     </button>
                 </div>
-                 <div className="absolute top-4 right-4">
+                 <div className="absolute top-4 right-4 z-10">
                     <button onClick={handleToggleSave} className={`bg-white/70 backdrop-blur-sm p-2 rounded-full shadow-md ${isSaved ? 'text-red-500' : 'text-gray-600'} hover:bg-white`}>
                         <HeartIcon isFilled={isSaved} className="w-6 h-6" />
                     </button>
@@ -260,6 +290,19 @@ const StoryScreen: React.FC = () => {
                         <ChevronRightIcon className="w-10 h-10" />
                     </button>
                 </div>
+                
+                <AnimatePresence>
+                    {toastMessage && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                            className="absolute bottom-28 z-20 bg-red-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-xl shadow-lg text-sm text-center"
+                        >
+                            {toastMessage}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     };
